@@ -1,0 +1,16 @@
+certifi==2025.4.26
+charset-normalizer==3.4.2
+chat-downloader==0.2.8
+colorama==0.4.6
+colorlog==6.9.0
+defusedxml==0.7.1
+dnspython==2.7.0
+docstring_parser==0.16
+idna==3.10
+isodate==0.7.2
+pymongo==4.12.1
+requests==2.32.3
+urllib3==2.4.0
+websocket-client==1.8.0
+youtool==0.2.0
+youtube-transcript-api==1.0.3
