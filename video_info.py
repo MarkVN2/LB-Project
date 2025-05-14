@@ -3,24 +3,35 @@ from youtube_transcript_api import YouTubeTranscriptApi, TranscriptsDisabled, No
 from pymongo import MongoClient
 import argparse
 import os
+import json
+from datetime import datetime
+from itertools import islice
 
 MONGO_HOST = os.getenv('MONGO_HOST', 'localhost')
 MONGO_PORT = int(os.getenv('MONGO_PORT', 27017))
 DB_NAME = os.getenv('DB_NAME', '')
 COLLECTION_NAME = os.getenv('COLLECTION_NAME', '')
 
-# Initialize MongoDB connection
 conn = MongoClient(MONGO_HOST, MONGO_PORT)
 
-# Initialize YouTube tool
 API_KEY = os.getenv('YOUTUBE_API_KEY', '')
 yt = YouTube(API_KEY, disable_ipv6=True)
+
+def convert_all_datetimes(obj):
+    if isinstance(obj, dict):
+        return {k: convert_all_datetimes(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [convert_all_datetimes(item) for item in obj]
+    elif isinstance(obj, datetime):
+        return obj.isoformat()
+    else:
+        return obj
 
 def format_url(url: str) -> str:
     formatted_url = url.split("v=")[-1].split("&")[0]
     return formatted_url
 
-def get_video_data(video: str, data_collection_level: int, show: bool) -> None:
+def get_video_data(video: str, data_collection_level: int, show: bool, save_json: bool) -> None:
     """
     Fetch and process video data from YouTube API.
     
@@ -51,7 +62,7 @@ def get_video_data(video: str, data_collection_level: int, show: bool) -> None:
     
     if data_collection_level >= 2: 
         try:
-            comments_info = next(yt.video_comments(video))
+            comments_info = list(islice(yt.video_comments(video), 100))
             video_data['comments'] = comments_info
         except: 
             print("[WARNING] No Comments")
@@ -69,19 +80,27 @@ def get_video_data(video: str, data_collection_level: int, show: bool) -> None:
             video_data['livechat'] = livechat_info
         except:
             print("[WARNING] No Live Chat Replay")
+    if save_json:
+        clean_data = convert_all_datetimes(video_data)
+        with open("data.json","w", encoding="utf-8") as json_file:
+            json.dump(clean_data,json_file, ensure_ascii=False ,indent=4)
+        print("[INFO] JSON created")
     if show:
         from pprint import pprint
-        pprint(video_data)  # Replace with real output
+        pprint(video_data) 
 
 def main():
     parser = argparse.ArgumentParser(description="YouTube video data collector")
-    parser.add_argument("video", help="YouTube video URL")
+    parser.add_argument("video", help="Video URL")
     parser.add_argument("--data", type=int, choices=range(1, 5), default=4,
                         help="Data collection level (1-4), default is 4")
     parser.add_argument("--show", action="store_true", help="Print collected data")
+    parser.add_argument("--save_json", action="store_true", help="Save data to a json file" )
+    parser.add_argument("--comments", type=int, default=100, help="Max number of comments to fetch (default: 100)")
 
     args = parser.parse_args()
-    get_video_data(args.video, args.data, args.show)
+    get_video_data(args.video, args.data, args.show,args.save_json)
 
 if __name__ == "__main__":
     main()
+    
