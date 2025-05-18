@@ -31,7 +31,7 @@ def format_url(url: str) -> str:
     formatted_url = url.split("v=")[-1].split("&")[0]
     return formatted_url
 
-def get_video_data(video: str, data_collection_level: int, show: bool, save_json: bool) -> None:
+def get_video_data(video: str, data_collection_level: int, show: bool, save_json: bool, save_mongodb) -> None:
     """
     Fetch and process video data from YouTube API.
     
@@ -88,6 +88,9 @@ def get_video_data(video: str, data_collection_level: int, show: bool, save_json
     if show:
         from pprint import pprint
         pprint(video_data) 
+    if save_mongodb:
+        conn[DB_NAME][COLLECTION_NAME].insert_one(video_data)
+        print("[INFO] Saved to MongoDB")
 
 def main():
     parser = argparse.ArgumentParser(description="YouTube video data collector")
@@ -95,11 +98,12 @@ def main():
     parser.add_argument("--data", type=int, choices=range(1, 5), default=4,
                         help="Data collection level (1-4), default is 4")
     parser.add_argument("--show", action="store_true", help="Print collected data")
-    parser.add_argument("--save_json", action="store_true", help="Save data to a json file" )
+    parser.add_argument("--save_json", action="store_true", help="Save data to a json file")
     parser.add_argument("--comments", type=int, default=100, help="Max number of comments to fetch (default: 100)")
+    parser.add_argument("--save_mongodb", action="store_true", help="Save data to a mongodb collection")
 
     args = parser.parse_args()
-    get_video_data(args.video, args.data, args.show,args.save_json)
+    get_video_data(args.video, args.data, args.show, args.save_json, args.save_mongodb)
 
 if __name__ == "__main__":
     main()
